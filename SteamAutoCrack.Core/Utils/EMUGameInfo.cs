@@ -414,10 +414,56 @@ internal abstract class Generator
         }
     }
 
-    protected async Task DownloadImageAsync(string imageFolder, Achievement achievement,
+    private static string ConvertSteamImageUrlToFastly(string imageUrl)
+    {
+        const string steamAkamaiBaseUrl = "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/";
+        const string fastlyBaseUrl = "https://shared.fastly.steamstatic.com/community_assets/images/apps/";
+
+        if (imageUrl.StartsWith(steamAkamaiBaseUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return fastlyBaseUrl + imageUrl[steamAkamaiBaseUrl.Length..];
+        }
+
+        return imageUrl;
+    }
+
+    private async Task DownloadImageWithFallbackAsync(string imageUrl, string targetPath, string logContext,
         CancellationToken cancellationToken = default)
     {
         using var client = new HttpClient();
+        using var response = await client.GetAsync(new Uri(imageUrl, UriKind.Absolute),
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            _log.Warning("{Context} returned 404, retrying with Fastly URL: {Url}", logContext, imageUrl);
+
+            var fallbackUrl = ConvertSteamImageUrlToFastly(imageUrl);
+            if (!string.Equals(imageUrl, fallbackUrl, StringComparison.Ordinal))
+            {
+                using var fallbackResponse = await client.GetAsync(new Uri(fallbackUrl, UriKind.Absolute),
+                    HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                if (fallbackResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _log.Error("Fastly retry for {Context} also returned 404: {Url}", logContext, fallbackUrl);
+                    return;
+                }
+
+                fallbackResponse.EnsureSuccessStatusCode();
+                await using var fallbackStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await fallbackResponse.Content.CopyToAsync(fallbackStream, cancellationToken);
+                return;
+            }
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using var responseStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await response.Content.CopyToAsync(responseStream, cancellationToken);
+    }
+
+    protected async Task DownloadImageAsync(string imageFolder, Achievement achievement,
+        CancellationToken cancellationToken = default)
+    {
         try
         {
             var fileName = Path.GetFileName(achievement.Icon);
@@ -425,10 +471,8 @@ internal abstract class Generator
             if (!DownloadedFile.Exists(x => x == targetPath))
             {
                 DownloadedFile.Add(targetPath);
-                var response = await client.GetAsync(new Uri(achievement.Icon, UriKind.Absolute), cancellationToken);
-                response.EnsureSuccessStatusCode();
-                await using var fs = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await response.Content.CopyToAsync(fs, cancellationToken);
+                await DownloadImageWithFallbackAsync(achievement.Icon, targetPath, $"achievement image \"{achievement.Name}\"",
+                    cancellationToken);
             }
             else
             {
@@ -451,11 +495,8 @@ internal abstract class Generator
             if (!DownloadedFile.Exists(x => x == targetPathGray))
             {
                 DownloadedFile.Add(targetPathGray);
-                var response =
-                    await client.GetAsync(new Uri(achievement.IconGray, UriKind.Absolute), cancellationToken);
-                response.EnsureSuccessStatusCode();
-                await using var fs = new FileStream(targetPathGray, FileMode.Create, FileAccess.Write, FileShare.None);
-                await response.Content.CopyToAsync(fs, cancellationToken);
+                await DownloadImageWithFallbackAsync(achievement.IconGray, targetPathGray,
+                    $"achievement gray image \"{achievement.Name}\"", cancellationToken);
             }
             else
             {
