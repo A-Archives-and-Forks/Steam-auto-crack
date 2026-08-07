@@ -15,6 +15,7 @@
     <ProjectReference Include="..\Steamless.API\Steamless.API.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.IO.Packaging" Version="10.0.8" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.10" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
   </ItemGroup>
 </Project>

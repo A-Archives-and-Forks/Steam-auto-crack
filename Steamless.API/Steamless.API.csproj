@@ -12,7 +12,8 @@
     <OutputPath>..\Steamless\bin\x86\Release\Plugins\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="10.0.8" />
-    <PackageReference Include="System.IO.Packaging" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="10.0.10" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.10" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
   </ItemGroup>
 </Project>
