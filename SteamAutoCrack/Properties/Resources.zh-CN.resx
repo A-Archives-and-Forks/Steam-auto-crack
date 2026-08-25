@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -306,6 +306,9 @@
   <data name="SteamWebAPIKey" xml:space="preserve">
     <value>Steam Web API 密钥:</value>
   </data>
+  <data name="SteamWebAPIAccessToken" xml:space="preserve">
+    <value>Steam Web API 访问令牌:</value>
+  </data>
   <data name="UpdateDownload" xml:space="preserve">
     <value>升级/下载</value>
   </data>
@@ -323,9 +326,6 @@
   </data>
   <data name="UseSteamWebAppList" xml:space="preserve">
     <value>使用 Steam Web 应用列表</value>
-  </data>
-  <data name="UseXan105API" xml:space="preserve">
-    <value>使用 Xan105 API</value>
   </data>
   <data name="_1GenerateGoldbergSteamEmulatorGameInfo" xml:space="preserve">
     <value>1. 生成 Goldberg Steam 模拟器游戏信息</value>
@@ -359,5 +359,17 @@
   </data>
   <data name="Ticket" xml:space="preserve">
     <value>票证:</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="EnableAllTime" xml:space="preserve">
+    <value>始终启用</value>
+  </data>
+  <data name="EnableOnlyNthTime" xml:space="preserve">
+    <value>仅第 N 次启用</value>
+  </data>
+  <data name="EnableOnlyNotNthTime" xml:space="preserve">
+    <value>仅非第 N 次启用</value>
   </data>
 </root>

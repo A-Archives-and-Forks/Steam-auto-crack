@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -201,20 +201,6 @@ internal class MainWindowViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool UseXan105API
-    {
-        get => Config.EMUGameInfoConfigs.UseXan105API;
-
-        set
-        {
-            if (value != Config.EMUGameInfoConfigs.UseXan105API)
-            {
-                Config.EMUGameInfoConfigs.UseXan105API = value;
-                NotifyPropertyChanged();
-            }
-        }
-    }
-
     public bool UseSteamWebAppList
     {
         get => Config.EMUGameInfoConfigs.UseSteamWebAppList;
@@ -238,6 +224,20 @@ internal class MainWindowViewModel : INotifyPropertyChanged
             if (value != Config.EMUGameInfoConfigs.GenerateImages)
             {
                 Config.EMUGameInfoConfigs.GenerateImages = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
+
+    public SteamWebAPIKeyType SteamWebAPIKeyType
+    {
+        get => Config.EMUGameInfoConfigs.SteamWebAPIKeyType;
+
+        set
+        {
+            if (value != Config.EMUGameInfoConfigs.SteamWebAPIKeyType)
+            {
+                Config.EMUGameInfoConfigs.SteamWebAPIKeyType = value;
                 NotifyPropertyChanged();
             }
         }

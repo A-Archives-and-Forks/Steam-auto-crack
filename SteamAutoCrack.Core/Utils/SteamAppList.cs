@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FuzzySharp;
 using FuzzySharp.SimilarityRatio;
@@ -98,7 +98,7 @@ public class SteamAppList
                     _log.Information("Updating Steam App list...");
                     if (Config.Config.EMUGameInfoConfigs.SteamWebAPIKey == string.Empty)
                     {
-                        _log.Warning("Steam Web API Key not set. Please set it to update Steam App List.");
+                        _log.Warning("Steam Web API Key / Access Token not set. Please set it to update Steam App List.");
                         if (!dbExistsWithData) bDisposed = true;
                         return;
                     }
@@ -108,12 +108,15 @@ public class SteamAppList
                     var haveMore = false;
                     var allApps = new List<SteamApp>();
                     var requestKey = Config.Config.EMUGameInfoConfigs.SteamWebAPIKey;
+                    var authParam = Config.Config.EMUGameInfoConfigs.SteamWebAPIKeyType == SteamWebAPIKeyType.AccessToken
+                        ? $"key=&access_token={requestKey}"
+                        : $"key={requestKey}";
 
                     var maxRetries = 3;
 
                     do
                     {
-                        var url = $"{steamapplisturl}?key={requestKey}&max_results=50000&last_appid={lastAppId}";
+                        var url = $"{steamapplisturl}?{authParam}&max_results=50000&last_appid={lastAppId}";
                         _log.Debug("Requesting Steam App list batch with last_appid={lastAppId}", lastAppId);
 
                         var attempt = 0;

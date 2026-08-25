@@ -1,4 +1,4 @@
-﻿#pragma warning disable CS4014
+#pragma warning disable CS4014
 
 using System.ComponentModel;
 using System.Globalization;
@@ -16,6 +16,12 @@ using static SteamAutoCrack.Core.Utils.EMUGameInfoConfig;
 using Section = IniFile.Section;
 
 namespace SteamAutoCrack.Core.Utils;
+
+public enum SteamWebAPIKeyType
+{
+    [Description("API Key")] ApiKey,
+    [Description("Access Token")] AccessToken
+}
 
 public class EMUGameInfoConfig
 {
@@ -35,6 +41,8 @@ public class EMUGameInfoConfig
 
     public GeneratorGameInfoAPI GameInfoAPI { get; set; } = GeneratorGameInfoAPI.GeneratorSteamClient;
 
+    public SteamWebAPIKeyType SteamWebAPIKeyType { get; set; } = SteamWebAPIKeyType.ApiKey;
+
     /// <summary>
     ///     Required when using Steam official Web API.
     /// </summary>
@@ -48,11 +56,6 @@ public class EMUGameInfoConfig
     public bool GenerateImages { get; set; } = true;
 
     public uint AppID { get; set; }
-
-    /// <summary>
-    ///     Use Xan105 API for generating game schema.
-    /// </summary>
-    public bool UseXan105API { get; set; } = false;
 
     /// <summary>
     ///     Use Steam Web App List when generating DLCs.
@@ -81,14 +84,11 @@ public class EMUGameInfoConfig
         public static readonly bool GenerateImages = true;
 
         /// <summary>
-        ///     Use Xan105 API for generating game schema.
-        /// </summary>
-        public static readonly bool UseXan105API = false;
-
-        /// <summary>
         ///     Use Steam Web App List when generating DLCs.
         /// </summary>
         public static readonly bool UseSteamWebAppList = false;
+
+        public static readonly SteamWebAPIKeyType SteamWebAPIKeyType = SteamWebAPIKeyType.ApiKey;
 
         /// <summary>
         ///     Required when using Steam official Web API.
@@ -156,22 +156,27 @@ internal abstract class Generator
     protected readonly string ConfigPath;
     protected readonly bool GenerateImages;
     protected readonly string SteamWebAPIKey;
+    protected readonly SteamWebAPIKeyType SteamWebAPIKeyType;
     protected readonly bool UseSteamWebAppList;
-    protected readonly bool UseXan105API = true;
     public Ini config_app = new();
     protected List<string> DownloadedFile = new();
     protected JsonDocument? GameSchema;
     private DateTime LastWebRequestTime;
+
+    protected string SteamWebAuthQuery =>
+        SteamWebAPIKeyType == SteamWebAPIKeyType.AccessToken
+            ? $"key=&access_token={SteamWebAPIKey}"
+            : $"key={SteamWebAPIKey}";
 
     public Generator(EMUGameInfoConfig GameInfoConfig)
     {
         _log = Log.ForContext<EMUGameInfo>();
         Ini.Config.AllowHashForComments(true);
         SteamWebAPIKey = GameInfoConfig.SteamWebAPIKey;
+        SteamWebAPIKeyType = GameInfoConfig.SteamWebAPIKeyType;
         ConfigPath = GameInfoConfig.ConfigPath;
         AppID = GameInfoConfig.AppID;
         GenerateImages = GameInfoConfig.GenerateImages;
-        UseXan105API = GameInfoConfig.UseXan105API;
         UseSteamWebAppList = GameInfoConfig.UseSteamWebAppList;
     }
 
@@ -226,12 +231,10 @@ internal abstract class Generator
         try
         {
             _log.Information("Getting game schema...");
-            var GameSchemaUrl = UseXan105API
-                ? "https://api.xan105.com/steam/ach/"
-                : "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/";
-            if (!UseXan105API && (SteamWebAPIKey == string.Empty || SteamWebAPIKey == null))
+            var GameSchemaUrl = "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/";
+            if (SteamWebAPIKey == string.Empty || SteamWebAPIKey == null)
             {
-                _log.Warning("Empty Steam Web API Key, skipping getting game schema...");
+                _log.Warning("Empty Steam Web API Key / Access Token, skipping getting game schema...");
                 return false;
             }
 
@@ -241,9 +244,7 @@ internal abstract class Generator
 
             var client = new HttpClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
-            var apiUrl = UseXan105API
-                ? $"{GameSchemaUrl}&appid={AppID}"
-                : $"{GameSchemaUrl}?l={language}&key={SteamWebAPIKey}&appid={AppID}";
+            var apiUrl = $"{GameSchemaUrl}?l={language}&{SteamWebAuthQuery}&appid={AppID}";
 
             client.Timeout = TimeSpan.FromSeconds(30);
             var response = await LimitSteamWebApiGET(client,
@@ -255,9 +256,9 @@ internal abstract class Generator
                 _log.Debug("Got game schema.");
                 GameSchema = JsonDocument.Parse(responseBody);
             }
-            else if (responseCode == HttpStatusCode.Forbidden && !UseXan105API)
+            else if (responseCode == HttpStatusCode.Forbidden)
             {
-                _log.Error("Error 403 in getting game schema, please check your Steam Web API key. Skipping...");
+                _log.Error("Error 403 in getting game schema, please check your Steam Web API key or Access Token. Skipping...");
                 throw new Exception("Error 403 in getting game schema.");
             }
             else
@@ -284,15 +285,9 @@ internal abstract class Generator
     {
         try
         {
-            if (UseXan105API)
-            {
-                _log.Debug("Using xan105 API, skipping generate inventory...");
-                return;
-            }
-
             if (SteamWebAPIKey == string.Empty || SteamWebAPIKey == null)
             {
-                _log.Warning("Empty Steam Web API Key, skipping generate inventory...");
+                _log.Warning("Empty Steam Web API Key / Access Token, skipping generate inventory...");
                 return;
             }
 
@@ -304,7 +299,7 @@ internal abstract class Generator
                 JsonDocument digestJson;
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
                 var apiUrl =
-                    $"https://api.steampowered.com/IInventoryService/GetItemDefMeta/v1?key={SteamWebAPIKey}&appid={AppID}";
+                    $"https://api.steampowered.com/IInventoryService/GetItemDefMeta/v1?{SteamWebAuthQuery}&appid={AppID}";
 
                 client.Timeout = TimeSpan.FromSeconds(30);
                 var response = await LimitSteamWebApiGET(client,
@@ -316,10 +311,10 @@ internal abstract class Generator
                     _log.Debug("Got inventory digest.");
                     digestJson = JsonDocument.Parse(responseBody);
                 }
-                else if (responseCode == HttpStatusCode.Forbidden && !UseXan105API)
+                else if (responseCode == HttpStatusCode.Forbidden)
                 {
                     _log.Error(
-                        "Error 403 in getting game inventory digest, please check your Steam Web API key. Skipping...");
+                        "Error 403 in getting game inventory digest, please check your Steam Web API key or Access Token. Skipping...");
                     throw new Exception("Error 403 in getting game inventory digest.");
                 }
                 else
@@ -518,13 +513,9 @@ internal abstract class Generator
         {
             _log.Debug("Generating achievements...");
             var achievementList = new List<Achievement>();
-            var achievementData = UseXan105API
-                ? GameSchema!.RootElement.GetProperty("data")
-                    .GetProperty("achievement")
-                    .GetProperty("list")
-                : GameSchema!.RootElement.GetProperty("game")
-                    .GetProperty("availableGameStats")
-                    .GetProperty("achievements");
+            var achievementData = GameSchema!.RootElement.GetProperty("game")
+                .GetProperty("availableGameStats")
+                .GetProperty("achievements");
 
             achievementList = JsonSerializer.Deserialize<List<Achievement>>(achievementData.GetRawText());
             if (achievementList?.Count > 0)
@@ -600,12 +591,6 @@ internal abstract class Generator
         {
             try
             {
-                if (UseXan105API)
-                {
-                    _log.Information("Using xan105 API, skipping generate stats...");
-                    return;
-                }
-
                 _log.Debug("Generating stats...");
                 var statData = GameSchema!.RootElement.GetProperty("game")
                     .GetProperty("availableGameStats")

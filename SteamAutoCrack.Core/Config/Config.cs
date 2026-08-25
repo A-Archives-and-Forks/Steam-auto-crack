@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -487,6 +487,9 @@ public class EMUGameInfoConfigs
     public EMUGameInfoConfig.GeneratorGameInfoAPI GameInfoAPI { get; set; } =
         EMUGameInfoConfig.DefaultConfig.GameInfoAPI;
 
+    public SteamWebAPIKeyType SteamWebAPIKeyType { get; set; } =
+        EMUGameInfoConfig.DefaultConfig.SteamWebAPIKeyType;
+
     /// <summary>
     ///     Required when using Steam official Web API.
     /// </summary>
@@ -500,21 +503,16 @@ public class EMUGameInfoConfigs
     [JsonIgnore] public string AppID { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Use Xan105 API for generating game schema.
-    /// </summary>
-    public bool UseXan105API { get; set; } = EMUGameInfoConfig.DefaultConfig.UseXan105API;
-
-    /// <summary>
     ///     Use Steam Web App List when generating DLCs.
     /// </summary>
     public bool UseSteamWebAppList { get; set; } = EMUGameInfoConfig.DefaultConfig.UseSteamWebAppList;
 
     public void ResettoDefault()
     {
+        SteamWebAPIKeyType = EMUGameInfoConfig.DefaultConfig.SteamWebAPIKeyType;
         SteamWebAPIKey = EMUGameInfoConfig.DefaultConfig.SteamWebAPIKey;
         GameInfoAPI = EMUGameInfoConfig.DefaultConfig.GameInfoAPI;
         GenerateImages = EMUGameInfoConfig.DefaultConfig.GenerateImages;
-        UseXan105API = EMUGameInfoConfig.DefaultConfig.UseXan105API;
         UseSteamWebAppList = EMUGameInfoConfig.DefaultConfig.UseSteamWebAppList;
     }
 
@@ -523,9 +521,9 @@ public class EMUGameInfoConfigs
         var emuGameInfoConfig = new EMUGameInfoConfig
         {
             GameInfoAPI = GameInfoAPI,
+            SteamWebAPIKeyType = SteamWebAPIKeyType,
             SteamWebAPIKey = SteamWebAPIKey,
             GenerateImages = GenerateImages,
-            UseXan105API = UseXan105API,
             UseSteamWebAppList = UseSteamWebAppList,
             ConfigPath = Config.EMUConfigPath
         };
